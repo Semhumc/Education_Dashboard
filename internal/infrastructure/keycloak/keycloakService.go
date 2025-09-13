@@ -192,3 +192,5 @@ func (kc *KeycloakAuthService) Logout(loginResponse models.LoginResponse) error 
 	}	
 	return nil
 }
+
+

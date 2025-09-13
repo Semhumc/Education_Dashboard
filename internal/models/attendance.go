@@ -2,7 +2,7 @@ package models
 
 type Attendance struct {
 	ID         string `json:"id"`
-	UserID     string `json:"user_id"`
+	StudentID  string `json:"student_id"`
 	ScheduleID string `json:"schedule_id"`
 	Here       bool   `json:"here"`
 	Counter    int    `json:"counter"`
@@ -13,7 +13,7 @@ type AttendanceRepository interface {
 	GetAttendanceByID(id string) (*Attendance, error)
 	UpdateAttendance(attendance *Attendance) error
 	DeleteAttendance(id string) error
-	GetAttendanceByUserID(userID string) ([]Attendance, error)
+	GetAttendanceByStudentID(studentID string) ([]Attendance, error)
 	GetAttendanceByScheduleID(scheduleID string) ([]Attendance, error)
 }
 
@@ -22,6 +22,6 @@ type AttendanceService interface {
 	GetAttendanceByID(id string) (*Attendance, error)
 	UpdateAttendance(attendance *Attendance) error
 	DeleteAttendance(id string) error
-	GetAttendanceByUserID(userID string) ([]Attendance, error)
+	GetAttendanceByStudentID(studentID string) ([]Attendance, error)
 	GetAttendanceByScheduleID(scheduleID string) ([]Attendance, error)
 }

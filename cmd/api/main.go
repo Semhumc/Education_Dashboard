@@ -28,7 +28,12 @@ func main() {
 		keycloak_base_url,
 	)
 
+	_ = keycloak.NewKeycloakClassService(keycloakAuthService)
+
+	
+
 	authHandler := handler.NewKeycloakHandler(keycloakAuthService)
+	
 
 	http.AuthRoutes(app, authHandler)
 	app.Listen(":" + port)

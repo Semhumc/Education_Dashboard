@@ -3,7 +3,7 @@ package models
 type Class struct {
 	ID        string `json:"id"`
 	ClassName string `json:"class_name"`
-	UserID    string `json:"user_id"`
+	TeacherID string `json:"teacher_id"`
 }
 
 type ClassRepository interface {
@@ -12,7 +12,7 @@ type ClassRepository interface {
 	UpdateClass(class *Class) error
 	DeleteClass(id string) error
 	GetAllClasses() ([]Class, error)
-	GetClassesByUserID(userID string) ([]Class, error)
+	GetClassesByTeacherID(teacherID string) ([]Class, error)
 }
 
 type ClassService interface {
@@ -21,5 +21,5 @@ type ClassService interface {
 	UpdateClass(class *Class) error
 	DeleteClass(id string) error
 	GetAllClasses() ([]Class, error)
-	GetClassesByUserID(userID string) ([]Class, error)
+	GetClassesByTeacherID(teacherID string) ([]Class, error)
 }
