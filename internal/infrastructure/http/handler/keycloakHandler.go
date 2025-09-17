@@ -181,3 +181,4 @@ func (kch KeycloakHandler) LogoutHandler(c *fiber.Ctx) error {
 		"message": "Logged out successfully",
 	})
 }
+
