@@ -1,5 +1,8 @@
 # Simple Makefile for a Go project
 
+include .env
+export
+
 # Build the application
 all: build test
 
@@ -45,5 +48,34 @@ watch:
 		air; \
 		Write-Output 'Watching...'; \
 	}"
+
+
+DB_URL=postgres://$(DB_POSTGRES_USER):$(DB_POSTGRES_PASSWORD)@localhost:$(DB_POSTGRES_PORT)/$(DB_POSTGRES_APP_NAME)?sslmode=disable
+
+## Migration komutları
+migrate-up:
+	migrate -path migrations -database "$(DB_URL)" up
+
+migrate-down:
+	migrate -path migrations -database "$(DB_URL)" down 1
+
+migrate-force:
+	migrate -path migrations -database "$(DB_URL)" force 1
+
+migrate-drop:
+	migrate -path migrations -database "$(DB_URL)" drop -f
+
+## Sqlc generate
+sqlc:
+	sqlc generate
+
+## Hepsi bir arada: migration + sqlc
+dev:
+	make migrate-up
+	make sqlc
+
+migration:
+	migrate create -ext sql -dir migrations -seq $(name)
+
 
 .PHONY: all build run test clean watch docker-run docker-down itest

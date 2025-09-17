@@ -21,14 +21,21 @@ func main() {
 
 	app := fiber.New()
 
-	keycloakAuthService := keycloak.NewKeycloakAuthService(
+	keycloakAuthService,_ := keycloak.NewKeycloakAuthService(
 		keycloak_client_id,
 		keycloak_client_secret,
 		keycloak_realm,
 		keycloak_base_url,
 	)
+	
+	/*keycloakClassService := keycloak.NewKeycloakClassService(
+		keycloak_client_id,
+		keycloak_client_secret,
+		keycloak_realm,
+		keycloak_base_url,
+	)*/
 
-	_ = keycloak.NewKeycloakClassService(keycloakAuthService)
+	
 
 	
 

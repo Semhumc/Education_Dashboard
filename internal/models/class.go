@@ -1,5 +1,6 @@
 package models
 
+
 type Class struct {
 	ID        string `json:"id"`
 	ClassName string `json:"class_name"`
@@ -8,18 +9,16 @@ type Class struct {
 
 type ClassRepository interface {
 	CreateClass(class *Class) error
-	GetClassByID(id string) (*Class, error)
 	UpdateClass(class *Class) error
-	DeleteClass(id string) error
+	DeleteClass(classID string) error
 	GetAllClasses() ([]Class, error)
 	GetClassesByTeacherID(teacherID string) ([]Class, error)
 }
 
 type ClassService interface {
-	CreateClass(class *Class) error
-	GetClassByID(id string) (*Class, error)
+	CreateClass(class *Class) (string,error)
 	UpdateClass(class *Class) error
-	DeleteClass(id string) error
+	DeleteClass(classID string) error
 	GetAllClasses() ([]Class, error)
 	GetClassesByTeacherID(teacherID string) ([]Class, error)
 }

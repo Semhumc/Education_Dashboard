@@ -16,20 +16,20 @@ type KeycloakAuthService struct {
 	Hostname     string
 }
 
-const (
+var (
 	ADMIN_USERNAME       = "admin"
 	ADMIN_PASSWORD       = "admin"
 	KEYCLOAK_ADMIN_REALM = "master"
 )
 
-func NewKeycloakAuthService(hostname, clientId, clientSecret, realm string) models.KeycloakService {
+func NewKeycloakAuthService(hostname, clientId, clientSecret, realm string) (models.KeycloakService, models.ClassService) {
 	return &KeycloakAuthService{
 		Gocloak:      gocloak.NewClient(hostname),
 		ClientId:     clientId,
 		ClientSecret: clientSecret,
 		Realm:        realm,
 		Hostname:     hostname,
-	}
+	}, nil
 }
 
 func (kc *KeycloakAuthService) Login(login models.Login) (*models.LoginResponse, error) {
@@ -144,7 +144,7 @@ func (kc *KeycloakAuthService) GetUserByID(userID string) (models.User, error) {
 	User := models.User{
 		ID:          *user.ID,
 		Username:    *user.Username,
-		Email:       *user.Email,	
+		Email:       *user.Email,
 		FirstName:   *user.FirstName,
 		LastName:    *user.LastName,
 		Phone:       (*user.Attributes)["phone"][0],
@@ -187,10 +187,158 @@ func (kc *KeycloakAuthService) GetAllUsers() ([]models.User, error) {
 func (kc *KeycloakAuthService) Logout(loginResponse models.LoginResponse) error {
 	ctx := context.Background()
 	err := kc.Gocloak.Logout(ctx, kc.ClientId, kc.ClientSecret, kc.Realm, loginResponse.RefreshToken)
-	if err != nil {	
+	if err != nil {
 		return fmt.Errorf("logout fail: %w", err)
-	}	
+	}
 	return nil
 }
 
+func (kc *KeycloakAuthService) CreateClass(class *models.Class) (string, error) {
+	ctx := context.Background()
 
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
+
+	if err != nil {
+		return "", fmt.Errorf("admin login fail: %w", err)
+	}
+
+	group := gocloak.Group{
+		Name: gocloak.StringP(class.ClassName),
+	}
+
+	groupID, err := kc.Gocloak.CreateGroup(ctx, adminToken.AccessToken, kc.Realm, group)
+	if err != nil {
+		return "", fmt.Errorf("create group fail: %w", err)
+	}
+
+	return groupID, nil
+}
+
+func (kc *KeycloakAuthService) DeleteClass(classID string) error {
+	ctx := context.Background()
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	if err != nil {
+		return fmt.Errorf("admin login fail:%w", err)
+	}
+
+	err = kc.Gocloak.DeleteGroup(ctx, adminToken.AccessToken, kc.Realm, classID)
+	if err != nil {
+		return fmt.Errorf("delete group fail:%w", err)
+	}
+
+	return nil
+}
+
+func (kc *KeycloakAuthService) GetAllClasses() ([]models.Class, error) {
+	ctx := context.Background()
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
+	if err != nil {
+		return nil, fmt.Errorf("admin login fail:%w", err)
+	}
+
+	groupParams := gocloak.GetGroupsParams{}
+
+	groups, err := kc.Gocloak.GetGroups(ctx, adminToken.AccessToken, kc.Realm, groupParams)
+	if err != nil {
+		return nil, fmt.Errorf("get groups fail:%w", err)
+	}
+
+	var classes []models.Class
+
+	for _, group := range groups {
+
+		if group == nil || group.ID == nil || group.Name == nil {
+			continue
+		}
+
+		teacherID := ""
+
+		users, err := kc.Gocloak.GetGroupMembers(ctx, adminToken.AccessToken, kc.Realm, *group.ID, groupParams)
+
+		if err != nil {
+			return nil, fmt.Errorf("get users fail:%w", err)
+
+		}
+
+		for _, user := range users {
+			if user.ID == nil {
+				return nil, fmt.Errorf("user id null:%w", err)
+			}
+
+			userRoles, err := kc.Gocloak.GetRealmRolesByUserID(ctx, adminToken.AccessToken, kc.Realm, *user.ID)
+			if err != nil {
+				return nil, fmt.Errorf("get roles fail:%w", err)
+			}
+
+			for _, userRole := range userRoles {
+				if *userRole.Name == "Teacher" {
+					teacherID = *user.ID
+					break
+				}
+			}
+			if teacherID != "" {
+				break
+			}
+		}
+
+		class := models.Class{
+			ID:        *group.ID,
+			ClassName: *group.Name,
+			TeacherID: teacherID,
+		}
+
+		classes = append(classes, class)
+
+	}
+
+	return classes, nil
+}
+
+func (kc *KeycloakAuthService) UpdateClass(class *models.Class) error {
+	ctx := context.Background()
+
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	if err != nil {
+		return fmt.Errorf("admin login failed: %w", err)
+	}
+
+	updatedGroup := gocloak.Group{
+		Name: gocloak.StringP("class_name"),
+	}
+
+	err = kc.Gocloak.UpdateGroup(ctx, adminToken.AccessToken, kc.Realm, updatedGroup)
+	if err != nil {
+		return fmt.Errorf("updated group fail:%w",err)
+		
+	}
+
+	return nil
+}
+
+func (kc *KeycloakAuthService) GetClassesByTeacherID(teacherID string) ([]models.Class, error) {
+	ctx := context.Background()
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx,ADMIN_USERNAME,ADMIN_PASSWORD,kc.Realm)
+	if err != nil{
+		return nil,fmt.Errorf("admin token fail:%w",err)
+	}
+
+	groupParams := gocloak.GetGroupsParams{}
+
+	groupById,err := kc.Gocloak.GetUserGroups(ctx,adminToken.AccessToken,kc.Realm,teacherID,groupParams)
+	if err != nil{
+		return nil,fmt.Errorf("get groups by id fail:%w",err)
+
+	}
+
+	var classes []models.Class
+	for _, kg := range groupById {
+		class := models.Class{
+			ID:   *kg.ID,   // Keycloak grubunun ID'si sınıf ID'si olarak kullanıldı
+			ClassName: *kg.Name, // Keycloak grubunun adı sınıf adı olarak kullanıldı
+		}
+		classes = append(classes, class)
+	}
+
+
+	return classes, nil
+}

@@ -1,47 +1,97 @@
+version: '3.8'
+
 services:
-  app:
+  app-service: # Servis adını "app" yerine "app-service" yaptık
     build:
       context: .
       dockerfile: Dockerfile
       target: prod
     restart: unless-stopped
     ports:
-      - ${PORT}:${PORT}
+      - "${APP_PORT}:${APP_PORT}" # APP_PORT değişkenini kullanıyoruz
     environment:
-      APP_ENV: ${APP_ENV}
-      PORT: ${PORT}
-      BLUEPRINT_DB_HOST: ${BLUEPRINT_DB_HOST}
-      BLUEPRINT_DB_PORT: ${BLUEPRINT_DB_PORT}
-      BLUEPRINT_DB_DATABASE: ${BLUEPRINT_DB_DATABASE}
-      BLUEPRINT_DB_USERNAME: ${BLUEPRINT_DB_USERNAME}
-      BLUEPRINT_DB_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
-      BLUEPRINT_DB_SCHEMA: ${BLUEPRINT_DB_SCHEMA}
+      APP_ENV: production # APP_ENV direkt "production" olarak ayarlandı, .env'den de alabilirdik
+      APP_PORT: ${APP_PORT}
+      DB_HOST: ${DB_POSTGRES_HOST} # Yeni isimlendirme
+      DB_PORT: ${DB_POSTGRES_PORT} # Yeni isimlendirme
+      DB_DATABASE: ${DB_POSTGRES_NAME} # Yeni isimlendirme
+      DB_USERNAME: ${DB_POSTGRES_USER} # Yeni isimlendirme
+      DB_PASSWORD: ${DB_POSTGRES_PASSWORD} # Yeni isimlendirme
+      # DB_SCHEMA: ${DB_SCHEMA} # Eğer kullanılıyorsa .env'ye eklenmeli
+      KEYCLOAK_BASE_URL: ${KEYCLOAK_BASE_URL}
+      KEYCLOAK_REALM: ${KEYCLOAK_REALM}
+      KEYCLOAK_CLIENT_ID: ${KEYCLOAK_CLIENT_ID}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET}
+      KEYCLOAK_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KEYCLOAK_ADMIN_REALM: ${KEYCLOAK_ADMIN_REALM}
     depends_on:
-      psql_bp:
+      psql-service: # Servis adını "psql_bp" yerine "psql-service" yaptık
         condition: service_healthy
     networks:
-      - blueprint
-  psql_bp:
-    image: postgres:latest
+      - education-network # Ağ adını "blueprint" yerine "camping-network" yaptık
+
+
+  psql-service: # Servis adını "psql_bp" yerine "psql-service" yaptık
+    image: postgres:13 # Versiyon belirtmek iyidir, latest yerine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${BLUEPRINT_DB_DATABASE}
-      POSTGRES_USER: ${BLUEPRINT_DB_USERNAME}
-      POSTGRES_PASSWORD: ${BLUEPRINT_DB_PASSWORD}
+      POSTGRES_DB: ${DB_POSTGRES_NAME} # Yeni isimlendirme
+      POSTGRES_USER: ${DB_POSTGRES_USER} # Yeni isimlendirme
+      POSTGRES_PASSWORD: ${DB_POSTGRES_PASSWORD} # Yeni isimlendirme
     ports:
-      - "${BLUEPRINT_DB_PORT}:5432"
+      - "${DB_POSTGRES_PORT}:5432" # İç ve dış portları netleştirdik
     volumes:
-      - psql_volume_bp:/var/lib/postgresql/data
+      - psql-data:/var/lib/postgresql/data # Volume adını "psql_volume_bp" yerine "psql-data" yaptık
     healthcheck:
-      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${BLUEPRINT_DB_USERNAME} -d ${BLUEPRINT_DB_DATABASE}'"]
+      test: ["CMD-SHELL", "sh -c 'pg_isready -U ${DB_POSTGRES_USER} -d ${DB_POSTGRES_NAME}'"] # Yeni isimlendirme
       interval: 5s
       timeout: 5s
       retries: 3
       start_period: 15s
     networks:
-      - blueprint
+      - education-network # Ağ adını "blueprint" yerine "camping-network" yaptık
+
+
+  pgadmin:    
+    image: dpage/pgadmin4
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com # PgAdmin giriş e-postası
+      PGADMIN_DEFAULT_PASSWORD: admin # PgAdmin giriş şifresi
+      PGADMIN_LISTEN_PORT: 80 # PgAdmin'in container içinde dinlediği port
+    ports:
+      - "5050:80" # Host'ta 5050 portundan erişilebilir
+    depends_on:
+      psql-service:
+        condition: service_healthy
+    networks:
+      - education-network
+
+  keycloak-service: # Keycloak servisi
+    image: quay.io/keycloak/keycloak:23.0.6 # İstediğiniz Keycloak versiyonunu seçebilirsiniz (örn. 21.1.1)
+    restart: unless-stopped
+    command: start-dev # Geliştirme modu için, üretimde farklı komutlar kullanılır
+    environment:
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN_USERNAME} # Admin kullanıcı adı
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD} # Admin şifresi
+      KC_DB: ${KC_DB_VENDOR} # .env'den alıyoruz (postgres)
+      KC_DB_URL: ${KC_DB_URL} # .env'den alıyoruz (jdbc:postgresql://psql-service:5432/keycloak_db)
+      KC_DB_USERNAME: ${KC_DB_USERNAME} # .env'den alıyoruz
+      KC_DB_PASSWORD: ${KC_DB_PASSWORD} # .env'den alıyoruz
+      KC_HOSTNAME: ${KC_HOSTNAME} 
+    ports:
+      - "8080:8080" 
+    depends_on:
+      psql-service: 
+        condition: service_healthy
+    networks:
+      - education-network
 
 volumes:
-  psql_volume_bp:
+  psql-data: 
+  keycloak-data: 
+    driver: local
+
 networks:
-  blueprint:
+  education-network: 
