@@ -10,6 +10,8 @@ require (
 	github.com/testcontainers/testcontainers-go/modules/postgres v0.38.0
 )
 
+require github.com/jackc/pgx v3.6.2+incompatible // indirect
+
 require (
 	dario.cat/mergo v1.0.1 // indirect
 	github.com/Azure/go-ansiterm v0.0.0-20210617225240-d185dfc1b5a1 // indirect
