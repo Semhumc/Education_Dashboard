@@ -29,4 +29,9 @@ type ScheduleService interface {
 	GetAllSchedules() ([]Schedule, error)
 	GetSchedulesByTeacherID(teacherID string) ([]Schedule, error)
 	GetSchedulesByClassID(classID string) ([]Schedule, error)
+	RescheduleSchedule(scheduleID string, newDate time.Time, newTime time.Time) error
+	GetScheduleConflicts(teacherID, classID string, date time.Time, startTime time.Time) ([]Schedule, error)
+	GetUpcomingSchedules(teacherID string, days int) ([]Schedule, error)
+	GetWeekSchedules(startDate time.Time) ([]Schedule, error)
+	GetTodaySchedules() ([]Schedule, error)
 }

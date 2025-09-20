@@ -23,6 +23,8 @@ type AttendanceService interface {
 	GetAttendanceByID(id string) (*Attendance, error)
 	UpdateAttendance(attendance *Attendance) error
 	DeleteAttendance(id string) error
+	GetAttendanceRateByStudent(studentID string) (float64, error)
+	MarkAttendance(studentID, scheduleID string, isPresent bool) error
 	GetAttendanceByStudentID(studentID string) ([]Attendance, error)
 	GetAttendanceByScheduleID(scheduleID string) ([]Attendance, error)
 }

@@ -29,4 +29,11 @@ type HomeworkService interface {
 	UpdateHomework(homework *Homework) error
 	DeleteHomework(id string) error
 	GetAllHomeworks() ([]Homework, error)
+	ExtendDueDate(homeworkID string, newDueDate time.Time) error
+	GetHomeworksDueSoon(hours int) ([]Homework, error)
+	GetOverdueHomeworks() ([]Homework, error)
+	GetActiveHomeworks() ([]Homework, error)
+	GetHomeworksByClassID(classID string) ([]Homework, error)
+	GetHomeworksByLessonID(lessonID string) ([]Homework, error)
+	GetHomeworksByTeacherID(teacherID string) ([]Homework, error)
 }
