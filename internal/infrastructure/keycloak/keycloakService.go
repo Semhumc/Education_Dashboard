@@ -5,6 +5,7 @@ import (
 
 	"context"
 	"fmt"
+
 	"github.com/Nerzal/gocloak/v13"
 )
 
@@ -39,9 +40,34 @@ func (kc *KeycloakAuthService) Login(login models.Login) (*models.LoginResponse,
 		return nil, fmt.Errorf("login fail: %w", err)
 	}
 
+	// Get admin token to retrieve user roles
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
+	if err != nil {
+		return nil, fmt.Errorf("admin login fail to get user roles: %w", err)
+	}
+
+	// Get user ID from the obtained token (assuming username is unique and can be used to get user ID)
+	users, err := kc.Gocloak.GetUsers(ctx, adminToken.AccessToken, kc.Realm, gocloak.GetUsersParams{Username: &login.Username})
+	if err != nil || len(users) == 0 || users[0].ID == nil {
+		return nil, fmt.Errorf("failed to get user details for role extraction: %w", err)
+	}
+	userID := *users[0].ID
+
+	// Get user details by ID to extract role attribute
+	userDetails, err := kc.Gocloak.GetUserByID(ctx, adminToken.AccessToken, kc.Realm, userID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get user by ID for role extraction: %w", err)
+	}
+
+	userRole := ""
+	if userDetails.Attributes != nil && (*userDetails.Attributes)["role"] != nil && len((*userDetails.Attributes)["role"]) > 0 {
+		userRole = (*userDetails.Attributes)["role"][0]
+	}
+
 	resp := &models.LoginResponse{
 		AccessToken:  token.AccessToken,
 		RefreshToken: token.RefreshToken,
+		Role:         userRole,
 	}
 	return resp, nil
 }
@@ -308,8 +334,8 @@ func (kc *KeycloakAuthService) UpdateClass(class *models.Class) error {
 
 	err = kc.Gocloak.UpdateGroup(ctx, adminToken.AccessToken, kc.Realm, updatedGroup)
 	if err != nil {
-		return fmt.Errorf("updated group fail:%w",err)
-		
+		return fmt.Errorf("updated group fail:%w", err)
+
 	}
 
 	return nil
@@ -317,28 +343,59 @@ func (kc *KeycloakAuthService) UpdateClass(class *models.Class) error {
 
 func (kc *KeycloakAuthService) GetClassesByTeacherID(teacherID string) ([]models.Class, error) {
 	ctx := context.Background()
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx,ADMIN_USERNAME,ADMIN_PASSWORD,kc.Realm)
-	if err != nil{
-		return nil,fmt.Errorf("admin token fail:%w",err)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	if err != nil {
+		return nil, fmt.Errorf("admin token fail:%w", err)
 	}
 
 	groupParams := gocloak.GetGroupsParams{}
 
-	groupById,err := kc.Gocloak.GetUserGroups(ctx,adminToken.AccessToken,kc.Realm,teacherID,groupParams)
-	if err != nil{
-		return nil,fmt.Errorf("get groups by id fail:%w",err)
+	groupById, err := kc.Gocloak.GetUserGroups(ctx, adminToken.AccessToken, kc.Realm, teacherID, groupParams)
+	if err != nil {
+		return nil, fmt.Errorf("get groups by id fail:%w", err)
 
 	}
 
 	var classes []models.Class
 	for _, kg := range groupById {
 		class := models.Class{
-			ID:   *kg.ID,   // Keycloak grubunun ID'si sınıf ID'si olarak kullanıldı
+			ID:        *kg.ID,   // Keycloak grubunun ID'si sınıf ID'si olarak kullanıldı
 			ClassName: *kg.Name, // Keycloak grubunun adı sınıf adı olarak kullanıldı
 		}
 		classes = append(classes, class)
 	}
 
-
 	return classes, nil
+}
+
+func (kc *KeycloakAuthService) GetStudentsByClassID(classID string) ([]models.User, error) {
+	ctx := context.Background()
+
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
+	if err != nil {
+		return nil, fmt.Errorf("admin login fail: %w", err)
+	}
+
+	groupMembers, err := kc.Gocloak.GetGroupMembers(ctx, adminToken.AccessToken, kc.Realm, classID, gocloak.GetGroupsParams{})
+	if err != nil {
+		return nil, fmt.Errorf("get group members fail: %w", err)
+	}
+
+	var students []models.User
+	for _, member := range groupMembers {
+		// Assuming a user with the role 'student' is a student
+		if member.Attributes != nil && len((*member.Attributes)["role"]) > 0 && (*member.Attributes)["role"][0] == "student" {
+			students = append(students, models.User{
+				ID:          *member.ID,
+				Username:    *member.Username,
+				Email:       *member.Email,
+				FirstName:   *member.FirstName,
+				LastName:    *member.LastName,
+				Phone:       (*member.Attributes)["phone"][0],
+				Role:        (*member.Attributes)["role"][0],
+				FamilyPhone: (*member.Attributes)["family_phone"][0],
+			})
+		}
+	}
+	return students, nil
 }

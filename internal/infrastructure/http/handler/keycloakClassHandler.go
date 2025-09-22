@@ -129,3 +129,22 @@ func (kcc KeycloakClassHandler) GetClassesByTeacherIDHandler(c *fiber.Ctx) error
 	return c.JSON(classes)
 }
 
+func (kcc KeycloakClassHandler) GetStudentsByClassIDHandler(c *fiber.Ctx) error {
+	classID := c.Params("id")
+	if classID == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Bad Request",
+			"message": "Class ID is required",
+		})
+	}
+
+	students, err := kcc.keycloakClassService.GetStudentsByClassID(classID)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Internal Server Error",
+			"message": err.Error(),
+		})
+	}
+	return c.JSON(students)
+}
+

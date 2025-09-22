@@ -21,4 +21,5 @@ type ClassService interface {
 	DeleteClass(classID string) error
 	GetAllClasses() ([]Class, error)
 	GetClassesByTeacherID(teacherID string) ([]Class, error)
+	GetStudentsByClassID(classID string) ([]User, error) // New method
 }

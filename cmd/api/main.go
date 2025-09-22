@@ -2,11 +2,11 @@ package main
 
 import (
 	"Education_Dashboard/internal/application"
-	"Education_Dashboard/internal/infrastructure/http"
-	"Education_Dashboard/internal/infrastructure/http/handler"
 	"Education_Dashboard/internal/application/handlers"
-	"Education_Dashboard/internal/infrastructure/keycloak"
 	"Education_Dashboard/internal/infrastructure/db/postgresql/repo"
+	//"Education_Dashboard/internal/infrastructure/http"
+	"Education_Dashboard/internal/infrastructure/http/handler"
+	"Education_Dashboard/internal/infrastructure/keycloak"
 	"context"
 	"fmt"
 	"log"
@@ -19,19 +19,40 @@ import (
 )
 
 var (
-	keycloak_base_url      = os.Getenv("KEYCLOAK_BASE_URL")
-	keycloak_realm         = os.Getenv("KEYCLOAK_REALM")
-	keycloak_client_id     = os.Getenv("KEYCLOAK_CLIENT_ID")
-	keycloak_client_secret = os.Getenv("KEYCLOAK_CLIENT_SECRET")
-	port                   = "5000"
-	
+	keycloak_base_url      string
+	keycloak_realm         string
+	keycloak_client_id     string
+	keycloak_client_secret string
+	port                   string
+
 	// Database connection variables
-	db_host     = os.Getenv("DB_POSTGRES_HOST")
-	db_port     = os.Getenv("DB_POSTGRES_PORT")
-	db_name     = os.Getenv("DB_POSTGRES_NAME")
-	db_user     = os.Getenv("DB_POSTGRES_USER")
-	db_password = os.Getenv("DB_POSTGRES_PASSWORD")
+	db_host          string
+	db_port          string
+	db_name          string
+	db_user          string
+	db_password      string
+	app_frontend_url string
 )
+
+func init() {
+	// Set environment variables
+	keycloak_base_url = os.Getenv("KEYCLOAK_BASE_URL")
+	keycloak_realm = os.Getenv("KEYCLOAK_REALM")
+	keycloak_client_id = os.Getenv("KEYCLOAK_CLIENT_ID")
+	keycloak_client_secret = os.Getenv("KEYCLOAK_CLIENT_SECRET")
+	port = os.Getenv("APP_PORT")
+	if port == "" {
+		port = "5000" // Default to 5000 if APP_PORT is not set
+	}
+
+	app_frontend_url = os.Getenv("APP_FRONTEND_URL")
+
+	db_host = os.Getenv("DB_POSTGRES_HOST")
+	db_port = os.Getenv("DB_POSTGRES_PORT")
+	db_name = os.Getenv("DB_POSTGRES_NAME")
+	db_user = os.Getenv("DB_POSTGRES_USER")
+	db_password = os.Getenv("DB_POSTGRES_PASSWORD")
+}
 
 func main() {
 	// Initialize Fiber app
@@ -42,7 +63,7 @@ func main() {
 				code = e.Code
 			}
 			return c.Status(code).JSON(fiber.Map{
-				"error": true,
+				"error":   true,
 				"message": err.Error(),
 			})
 		},
@@ -50,7 +71,12 @@ func main() {
 
 	// Add middleware
 	app.Use(logger.New())
-	app.Use(cors.New())
+	app.Use(cors.New(cors.Config{
+		AllowOrigins:     app_frontend_url, // Allows requests from this origin
+		AllowMethods:     "*",              // Allow all methods
+		AllowHeaders:     "*",              // Allow all headers (e.g., Authorization, Content-Type)
+		AllowCredentials: true,             // Allow cookies to be sent
+	}))
 
 	// Initialize database connection
 	dbPool, err := initializeDatabase()
@@ -93,7 +119,7 @@ func main() {
 	// Health check endpoint
 	app.Get("/health", func(c *fiber.Ctx) error {
 		return c.JSON(fiber.Map{
-			"status": "ok",
+			"status":  "ok",
 			"message": "Education Dashboard API is running",
 		})
 	})
@@ -140,11 +166,16 @@ func initializeDatabase() (*pgxpool.Pool, error) {
 
 func setupRoutes(app *fiber.App, authHandler handler.KeycloakHandler, classHandler handler.KeycloakClassHandler, attendanceHandler handlers.AttendanceHandler, homeworkHandler handlers.HomeworkHandler, lessonHandler handlers.LessonHandler, scheduleHandler handlers.ScheduleHandler) {
 	// Authentication routes
-	http.AuthRoutes(app, authHandler)
-	
+	//http.AuthRoutes(app, authHandler)
+
 	// API group
 	api := app.Group("/v1/api")
-	
+
+
+	api.Post("/create", authHandler.RegisterHandler)
+	api.Post("/login", authHandler.LoginHandler)
+	api.Post("/logout", authHandler.LogoutHandler)
+
 	// Class routes
 	classGroup := api.Group("/class")
 	classGroup.Post("/create", classHandler.CreateClassHandler)
@@ -152,7 +183,7 @@ func setupRoutes(app *fiber.App, authHandler handler.KeycloakHandler, classHandl
 	classGroup.Get("/teacher/:teacherID", classHandler.GetClassesByTeacherIDHandler)
 	classGroup.Put("/update/:id", classHandler.UpdateClassHandler)
 	classGroup.Delete("/delete/:id", classHandler.DeleteClassHandler)
-	
+
 	// Attendance routes
 	attendanceGroup := api.Group("/attendance")
 	attendanceGroup.Post("/create", attendanceHandler.CreateAttendanceHandler)
@@ -163,7 +194,7 @@ func setupRoutes(app *fiber.App, authHandler handler.KeycloakHandler, classHandl
 	attendanceGroup.Get("/schedule/:scheduleID", attendanceHandler.GetAttendanceByScheduleIDHandler)
 	attendanceGroup.Post("/mark", attendanceHandler.MarkAttendanceHandler)
 	//attendanceGroup.Get("/rate/:studentID", attendanceHandler.GetAttendanceRateHandler)
-	
+
 	// Homework routes
 	homeworkGroup := api.Group("/homework")
 	homeworkGroup.Post("/create", homeworkHandler.CreateHomeworkHandler)
@@ -178,7 +209,7 @@ func setupRoutes(app *fiber.App, authHandler handler.KeycloakHandler, classHandl
 	homeworkGroup.Get("/overdue", homeworkHandler.GetOverdueHomeworksHandler)
 	homeworkGroup.Get("/due-soon", homeworkHandler.GetHomeworksDueSoonHandler)
 	homeworkGroup.Put("/extend/:id", homeworkHandler.ExtendDueDateHandler)
-	
+
 	// Lesson routes
 	lessonGroup := api.Group("/lesson")
 	lessonGroup.Post("/create", lessonHandler.CreateLessonHandler)
@@ -189,7 +220,7 @@ func setupRoutes(app *fiber.App, authHandler handler.KeycloakHandler, classHandl
 	//lessonGroup.Get("/search", lessonHandler.SearchLessonsHandler)
 	//lessonGroup.Get("/stats/:id", lessonHandler.GetLessonStatsHandler)
 	//lessonGroup.Get("/homework-count", lessonHandler.GetLessonsWithHomeworkCountHandler)
-	
+
 	// Schedule routes
 	scheduleGroup := api.Group("/schedule")
 	scheduleGroup.Post("/create", scheduleHandler.CreateScheduleHandler)

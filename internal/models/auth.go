@@ -19,6 +19,7 @@ type Register struct {
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
+	Role         string `json:"role"`
 }
 
 type User struct {
@@ -32,7 +33,7 @@ type User struct {
 	FamilyPhone string `json:"family_phone"`
 }
 
-type KeycloakService interface{
+type KeycloakService interface {
 	Register(register Register) error
 	Login(login Login) (*LoginResponse, error)
 	UpdateUser(id string, register Register) error
