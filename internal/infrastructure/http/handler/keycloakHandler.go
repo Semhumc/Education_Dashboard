@@ -182,3 +182,32 @@ func (kch KeycloakHandler) LogoutHandler(c *fiber.Ctx) error {
 	})
 }
 
+func (kch KeycloakHandler) CreateUserHandler(c *fiber.Ctx) error {
+	var registerparams models.Register
+	if err := c.BodyParser(&registerparams); err != nil {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Bad Request",
+			"message": err.Error(),
+		})
+	}
+
+	if registerparams.Username == "" || registerparams.Password == "" || registerparams.Email == "" || registerparams.FirstName == "" || registerparams.LastName == "" || registerparams.Phone == "" || registerparams.Role == "" {
+		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+			"error":   "Bad Request",
+			"message": "username, password, email, first name, last name, phone, and role are required",
+		})
+	}
+
+	err := kch.keycloakService.Register(registerparams)
+	if err != nil {
+		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+			"error":   "Internal Server Error",
+			"message": err.Error(),
+		})
+	}
+
+	return c.Status(fiber.StatusCreated).JSON(fiber.Map{
+		"message": "User created successfully",
+	})
+}
+

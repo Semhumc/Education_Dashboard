@@ -10,8 +10,8 @@ type AttendanceHandler struct {
 	attendanceService models.AttendanceService
 }
 
-func NewAttendanceHandler(as models.AttendanceService) AttendanceHandler{
-	return  AttendanceHandler{
+func NewAttendanceHandler(as models.AttendanceService) *AttendanceHandler {
+	return &AttendanceHandler{
 		attendanceService: as,
 	}
 }
@@ -31,7 +31,6 @@ func (ah AttendanceHandler) CreateAttendanceHandler(c *fiber.Ctx) error {
 			"message": "student_id and schedule_id are required",
 		})
 	}
-
 
 	err := ah.attendanceService.CreateAttendance(&attendance)
 	if err != nil {
@@ -104,7 +103,7 @@ func (ah *AttendanceHandler) GetAttendanceByIDHandler(c *fiber.Ctx) error {
 
 func (ah AttendanceHandler) DeleteAttendanceHandler(c *fiber.Ctx) error {
 	id := c.Params("id")
-	if id == ""{
+	if id == "" {
 		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
 			"error":   "Bad Request",
 			"message": "attendance ID is required",
@@ -123,8 +122,6 @@ func (ah AttendanceHandler) DeleteAttendanceHandler(c *fiber.Ctx) error {
 		"message": "Attendance deleted successfully",
 	})
 }
-
-
 
 func (ah *AttendanceHandler) GetAttendanceByStudentIDHandler(c *fiber.Ctx) error {
 	studentID := c.Params("studentID")
@@ -203,6 +200,3 @@ func (ah *AttendanceHandler) MarkAttendanceHandler(c *fiber.Ctx) error {
 		"message": "Attendance marked successfully",
 	})
 }
-
-
-

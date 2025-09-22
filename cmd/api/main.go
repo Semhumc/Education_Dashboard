@@ -4,8 +4,10 @@ import (
 	"Education_Dashboard/internal/application"
 	"Education_Dashboard/internal/application/handlers"
 	"Education_Dashboard/internal/infrastructure/db/postgresql/repo"
-	//"Education_Dashboard/internal/infrastructure/http"
+
+	"Education_Dashboard/internal/infrastructure/http"
 	"Education_Dashboard/internal/infrastructure/http/handler"
+	"Education_Dashboard/internal/infrastructure/http/middleware"
 	"Education_Dashboard/internal/infrastructure/keycloak"
 	"context"
 	"fmt"
@@ -113,8 +115,11 @@ func main() {
 	lessonHandler := handlers.NewLessonHandler(lessonService)
 	scheduleHandler := handlers.NewScheduleHandler(scheduleService)
 
+	// Initialize Auth Middleware
+	authMiddleware := middleware.NewAuthMiddleware(keycloakAuthService)
+
 	// Setup routes
-	setupRoutes(app, authHandler, classHandler, attendanceHandler, *homeworkHandler, *lessonHandler, *scheduleHandler)
+	http.SetupRoutes(app, authHandler, classHandler, scheduleHandler, attendanceHandler, lessonHandler, homeworkHandler, authMiddleware)
 
 	// Health check endpoint
 	app.Get("/health", func(c *fiber.Ctx) error {
@@ -162,77 +167,4 @@ func initializeDatabase() (*pgxpool.Pool, error) {
 
 	log.Println("Database connection established successfully")
 	return pool, nil
-}
-
-func setupRoutes(app *fiber.App, authHandler handler.KeycloakHandler, classHandler handler.KeycloakClassHandler, attendanceHandler handlers.AttendanceHandler, homeworkHandler handlers.HomeworkHandler, lessonHandler handlers.LessonHandler, scheduleHandler handlers.ScheduleHandler) {
-	// Authentication routes
-	//http.AuthRoutes(app, authHandler)
-
-	// API group
-	api := app.Group("/v1/api")
-
-
-	api.Post("/create", authHandler.RegisterHandler)
-	api.Post("/login", authHandler.LoginHandler)
-	api.Post("/logout", authHandler.LogoutHandler)
-
-	// Class routes
-	classGroup := api.Group("/class")
-	classGroup.Post("/create", classHandler.CreateClassHandler)
-	classGroup.Get("/all", classHandler.GetAllClassesHandler)
-	classGroup.Get("/teacher/:teacherID", classHandler.GetClassesByTeacherIDHandler)
-	classGroup.Put("/update/:id", classHandler.UpdateClassHandler)
-	classGroup.Delete("/delete/:id", classHandler.DeleteClassHandler)
-
-	// Attendance routes
-	attendanceGroup := api.Group("/attendance")
-	attendanceGroup.Post("/create", attendanceHandler.CreateAttendanceHandler)
-	attendanceGroup.Get("/:id", attendanceHandler.GetAttendanceByIDHandler)
-	attendanceGroup.Put("/update/:id", attendanceHandler.UpdateAttendanceHandler)
-	attendanceGroup.Delete("/delete/:id", attendanceHandler.DeleteAttendanceHandler)
-	attendanceGroup.Get("/student/:studentID", attendanceHandler.GetAttendanceByStudentIDHandler)
-	attendanceGroup.Get("/schedule/:scheduleID", attendanceHandler.GetAttendanceByScheduleIDHandler)
-	attendanceGroup.Post("/mark", attendanceHandler.MarkAttendanceHandler)
-	//attendanceGroup.Get("/rate/:studentID", attendanceHandler.GetAttendanceRateHandler)
-
-	// Homework routes
-	homeworkGroup := api.Group("/homework")
-	homeworkGroup.Post("/create", homeworkHandler.CreateHomeworkHandler)
-	homeworkGroup.Get("/:id", homeworkHandler.GetHomeworkByIDHandler)
-	homeworkGroup.Put("/update/:id", homeworkHandler.UpdateHomeworkHandler)
-	homeworkGroup.Delete("/delete/:id", homeworkHandler.DeleteHomeworkHandler)
-	homeworkGroup.Get("/all", homeworkHandler.GetAllHomeworksHandler)
-	homeworkGroup.Get("/teacher/:teacherID", homeworkHandler.GetHomeworksByTeacherIDHandler)
-	homeworkGroup.Get("/lesson/:lessonID", homeworkHandler.GetHomeworksByLessonIDHandler)
-	homeworkGroup.Get("/class/:classID", homeworkHandler.GetHomeworksByClassIDHandler)
-	homeworkGroup.Get("/active", homeworkHandler.GetActiveHomeworksHandler)
-	homeworkGroup.Get("/overdue", homeworkHandler.GetOverdueHomeworksHandler)
-	homeworkGroup.Get("/due-soon", homeworkHandler.GetHomeworksDueSoonHandler)
-	homeworkGroup.Put("/extend/:id", homeworkHandler.ExtendDueDateHandler)
-
-	// Lesson routes
-	lessonGroup := api.Group("/lesson")
-	lessonGroup.Post("/create", lessonHandler.CreateLessonHandler)
-	lessonGroup.Get("/:id", lessonHandler.GetLessonByIDHandler)
-	lessonGroup.Put("/update/:id", lessonHandler.UpdateLessonHandler)
-	lessonGroup.Delete("/delete/:id", lessonHandler.DeleteLessonHandler)
-	lessonGroup.Get("/all", lessonHandler.GetAllLessonsHandler)
-	//lessonGroup.Get("/search", lessonHandler.SearchLessonsHandler)
-	//lessonGroup.Get("/stats/:id", lessonHandler.GetLessonStatsHandler)
-	//lessonGroup.Get("/homework-count", lessonHandler.GetLessonsWithHomeworkCountHandler)
-
-	// Schedule routes
-	scheduleGroup := api.Group("/schedule")
-	scheduleGroup.Post("/create", scheduleHandler.CreateScheduleHandler)
-	scheduleGroup.Get("/:id", scheduleHandler.GetScheduleByIDHandler)
-	scheduleGroup.Put("/update/:id", scheduleHandler.UpdateScheduleHandler)
-	scheduleGroup.Delete("/delete/:id", scheduleHandler.DeleteScheduleHandler)
-	scheduleGroup.Get("/all", scheduleHandler.GetAllSchedulesHandler)
-	scheduleGroup.Get("/teacher/:teacherID", scheduleHandler.GetSchedulesByTeacherIDHandler)
-	scheduleGroup.Get("/class/:classID", scheduleHandler.GetSchedulesByClassIDHandler)
-	scheduleGroup.Get("/today", scheduleHandler.GetTodaySchedulesHandler)
-	scheduleGroup.Get("/week", scheduleHandler.GetWeekSchedulesHandler)
-	scheduleGroup.Get("/upcoming/:teacherID", scheduleHandler.GetUpcomingSchedulesHandler)
-	scheduleGroup.Post("/check-conflicts", scheduleHandler.CheckConflictsHandler)
-	scheduleGroup.Put("/reschedule/:id", scheduleHandler.RescheduleHandler)
 }

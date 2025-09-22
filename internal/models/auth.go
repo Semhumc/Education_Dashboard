@@ -19,7 +19,6 @@ type Register struct {
 type LoginResponse struct {
 	AccessToken  string `json:"access_token"`
 	RefreshToken string `json:"refresh_token"`
-	Role         string `json:"role"`
 }
 
 type User struct {
@@ -41,5 +40,7 @@ type KeycloakService interface {
 	GetUserByID(id string) (User, error)
 	GetAllUsers() ([]User, error)
 	Logout(loginResponse LoginResponse) error
-	//RefreshToken(refreshToken string) (*LoginResponse, error)
+	RetrospectToken(accessToken string) (bool, error)
+	DecodeToken(accessToken string) (map[string]interface{}, error)
+	RefreshToken(refreshToken string) (*LoginResponse, error)
 }
