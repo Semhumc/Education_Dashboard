@@ -37,6 +37,7 @@ func (kc *KeycloakAuthService) Login(login models.Login) (*models.LoginResponse,
 	ctx := context.Background()
 	token, err := kc.Gocloak.Login(ctx, kc.ClientId, kc.ClientSecret, kc.Realm, login.Username, login.Password)
 	if err != nil {
+		fmt.Printf("Keycloak Login failed for user %s: %v\n", login.Username, err) // Log the detailed error
 		return nil, fmt.Errorf("login fail: %w", err)
 	}
 
@@ -118,7 +119,7 @@ func (kc *KeycloakAuthService) UpdateUser(userID string, register models.Registe
 
 func (kc *KeycloakAuthService) DeleteUser(userID string) error {
 	ctx := context.Background()
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 	if err != nil {
 		return fmt.Errorf("admin login failed: %w", err)
 	}
@@ -132,7 +133,7 @@ func (kc *KeycloakAuthService) DeleteUser(userID string) error {
 
 func (kc *KeycloakAuthService) GetUserByID(userID string) (models.User, error) {
 	ctx := context.Background()
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 	if err != nil {
 		return models.User{}, fmt.Errorf("admin login fail: %w", err)
 	}
@@ -159,7 +160,7 @@ func (kc *KeycloakAuthService) GetUserByID(userID string) (models.User, error) {
 
 func (kc *KeycloakAuthService) GetAllUsers() ([]models.User, error) {
 	ctx := context.Background()
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 	if err != nil {
 		return nil, fmt.Errorf("admin login fail: %w", err)
 	}
@@ -211,7 +212,7 @@ func (kc *KeycloakAuthService) Logout(loginResponse models.LoginResponse) error 
 func (kc *KeycloakAuthService) CreateClass(class *models.Class) (string, error) {
 	ctx := context.Background()
 
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 
 	if err != nil {
 		return "", fmt.Errorf("admin login fail: %w", err)
@@ -231,7 +232,7 @@ func (kc *KeycloakAuthService) CreateClass(class *models.Class) (string, error) 
 
 func (kc *KeycloakAuthService) DeleteClass(classID string) error {
 	ctx := context.Background()
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 	if err != nil {
 		return fmt.Errorf("admin login fail:%w", err)
 	}
@@ -246,7 +247,7 @@ func (kc *KeycloakAuthService) DeleteClass(classID string) error {
 
 func (kc *KeycloakAuthService) GetAllClasses() ([]models.Class, error) {
 	ctx := context.Background()
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 	if err != nil {
 		return nil, fmt.Errorf("admin login fail:%w", err)
 	}
@@ -312,7 +313,7 @@ func (kc *KeycloakAuthService) GetAllClasses() ([]models.Class, error) {
 func (kc *KeycloakAuthService) UpdateClass(class *models.Class) error {
 	ctx := context.Background()
 
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 	if err != nil {
 		return fmt.Errorf("admin login failed: %w", err)
 	}
@@ -332,7 +333,7 @@ func (kc *KeycloakAuthService) UpdateClass(class *models.Class) error {
 
 func (kc *KeycloakAuthService) GetClassesByTeacherID(teacherID string) ([]models.Class, error) {
 	ctx := context.Background()
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 	if err != nil {
 		return nil, fmt.Errorf("admin token fail:%w", err)
 	}
@@ -360,7 +361,7 @@ func (kc *KeycloakAuthService) GetClassesByTeacherID(teacherID string) ([]models
 func (kc *KeycloakAuthService) GetStudentsByClassID(classID string) ([]models.User, error) {
 	ctx := context.Background()
 
-	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, kc.Realm)
+	adminToken, err := kc.Gocloak.LoginAdmin(ctx, ADMIN_USERNAME, ADMIN_PASSWORD, KEYCLOAK_ADMIN_REALM)
 	if err != nil {
 		return nil, fmt.Errorf("admin login fail: %w", err)
 	}
